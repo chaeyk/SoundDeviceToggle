@@ -4,8 +4,9 @@
 //
 
 #pragma once
+#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#include "targetver.h"
+#include <SDKDDKVer.h>
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
@@ -22,5 +23,21 @@
 #include <Propidl.h>
 #include <Functiondiscoverykeys_devpkey.h>
 
+#include <sal.h>
+#include <Psapi.h>
+#include <strsafe.h>
+#include <ObjBase.h>
+#include <ShObjIdl.h>
+#include <propvarutil.h>
+#include <functiondiscoverykeys.h>
+#include <intsafe.h>
+#include <guiddef.h>
+
+#include <roapi.h>
+#include <wrl\client.h>
+#include <wrl\implements.h>
+#include <windows.ui.notifications.h>
+
+#include <string>
 
 // TODO: reference additional headers your program requires here

@@ -3,6 +3,7 @@
 //
 
 #include "stdafx.h"
+#include "SoundDeviceToggle.h"
 #include "PolicyConfig.h"
 
 #define HRFAILED(hr) \
@@ -15,7 +16,7 @@ bool PrintFailed(LONG v, const char* file, int line)
 {
 	CHAR buf[512];
 	_snprintf_s(buf, _TRUNCATE, "Failed (%ld) at %s:%d\r\n", v, file, line);
-	OutputDebugStringA(buf);
+	MessageBoxA(nullptr, buf, "Failed launch", MB_OK | MB_ICONERROR);
 	return true;
 }
 
@@ -60,66 +61,65 @@ HRESULT SetDefaultAudioPlaybackDevice(LPCWSTR devID)
 	return hr;
 }
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+HRESULT SoundDeviceToggle(std::wstring& deviceName)
 {
-	HRESULT hr = CoInitialize(NULL);
-	if (SUCCEEDED(hr))
-	{
-		IMMDeviceEnumerator *pEnum = NULL;
-		// Create a multimedia device enumerator.
-		hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL,
-			CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)& pEnum);
-		if (HRFAILED(hr))
-			return hr;
+	HRESULT hr;
 
-		CComPtr<IMMDeviceCollection> pDevices;
-		// Enumerate the output devices.
-		hr = pEnum->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pDevices);
-		if (HRFAILED(hr))
-			return hr;
+	IMMDeviceEnumerator *pEnum = NULL;
+	// Create a multimedia device enumerator.
+	hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL,
+		CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)& pEnum);
+	if (HRFAILED(hr))
+		return hr;
 
-		UINT count;
-		pDevices->GetCount(&count);
-		if (HRFAILED(hr))
-			return hr;
+	CComPtr<IMMDeviceCollection> pDevices;
+	// Enumerate the output devices.
+	hr = pEnum->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pDevices);
+	if (HRFAILED(hr))
+		return hr;
 
-		DWORD dwIndex = GetThisTimeDevice(count);
-		if (dwIndex == (DWORD)-1) {
-			OutputDebugString(_T("Can't get toggle information\r\n"));
-			return -1;
-		}
+	UINT count;
+	pDevices->GetCount(&count);
+	if (HRFAILED(hr))
+		return hr;
 
-		CComPtr<IMMDevice> pDevice;
-		hr = pDevices->Item(dwIndex, &pDevice);
-		if (HRFAILED(hr))
-			return -1;
-
-		LPWSTR wstrID = NULL;
-		hr = pDevice->GetId(&wstrID);
-		if (HRFAILED(hr))
-			return -1;
-
-		CComPtr<IPropertyStore> pStore;
-		hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
-		if (HRFAILED(hr))
-			return -1;
-
-		PROPVARIANT friendlyName;
-		PropVariantInit(&friendlyName);
-		hr = pStore->GetValue(PKEY_Device_FriendlyName, &friendlyName);
-		if (HRFAILED(hr))
-			return -1;
-
-		WCHAR buf[512];
-		_snwprintf_s(buf, _TRUNCATE, L"Set to %ws\r\n", friendlyName.pwszVal);
-		OutputDebugStringW(buf);
-		SetDefaultAudioPlaybackDevice(wstrID);
-
-		PropVariantClear(&friendlyName);
+	DWORD dwIndex = GetThisTimeDevice(count);
+	if (dwIndex == (DWORD)-1) {
+		MessageBox(nullptr, _T("Can't get toggle information\r\n"), _T("Error"), MB_OK);
+		return -1;
 	}
+
+	CComPtr<IMMDevice> pDevice;
+	hr = pDevices->Item(dwIndex, &pDevice);
+	if (HRFAILED(hr))
+		return -1;
+
+	LPWSTR wstrID = NULL;
+	hr = pDevice->GetId(&wstrID);
+	if (HRFAILED(hr))
+		return -1;
+
+	CComPtr<IPropertyStore> pStore;
+	hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
+	if (HRFAILED(hr))
+		return -1;
+
+	PROPVARIANT friendlyName;
+	PropVariantInit(&friendlyName);
+	hr = pStore->GetValue(PKEY_Device_FriendlyName, &friendlyName);
+	if (HRFAILED(hr))
+		return -1;
+
+	deviceName = friendlyName.pwszVal;
+
+	WCHAR buf[512];
+	_snwprintf_s(buf, _TRUNCATE, L"Set to %ws\r\n", friendlyName.pwszVal);
+	OutputDebugStringW(buf);
+	hr = SetDefaultAudioPlaybackDevice(wstrID);
+	if (HRFAILED(hr))
+		return -1;
+
+	PropVariantClear(&friendlyName);
 
 	return 0;
 }
