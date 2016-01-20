@@ -19,13 +19,8 @@ bool PrintFailed(LONG v, const char* file, int line)
 	return true;
 }
 
-LPCWSTR GetThisTimeDevice()
+DWORD GetThisTimeDevice(DWORD dwMax)
 {
-	LPCWSTR lpwszDevices[2] = {
-		L"{0.0.0.00000000}.{393ea5c3-e0b4-4c97-9827-67a95aa8f517}",
-		L"{0.0.0.00000000}.{c9e6e7d1-5f15-4500-8053-c9f79fcee8b3}"
-	};
-
 	LONG lResult;
 
 	HKEY hkBase;
@@ -33,24 +28,22 @@ LPCWSTR GetThisTimeDevice()
 	if (LFAILED(lResult))
 		return NULL;
 
-	DWORD dwIndex = 999;
+	DWORD dwIndex = (DWORD)-1;
 	DWORD dwSize = sizeof(dwIndex);
 	lResult = RegGetValue(hkBase, NULL, _T("CurrentIndex"), RRF_RT_DWORD, NULL, &dwIndex, &dwSize);
 	if (lResult != ERROR_FILE_NOT_FOUND && LFAILED(lResult))
-		return NULL;
+		return (DWORD)-1;
 
-	if (dwIndex >= 2)
+	if (++dwIndex >= dwMax)
 		dwIndex = 0;
-
-	dwIndex = (1 - dwIndex);
 
 	lResult = RegSetValueEx(hkBase, _T("CurrentIndex"), 0, REG_DWORD, (const BYTE*) &dwIndex, sizeof(dwIndex));
 	if (LFAILED(lResult))
-		return NULL;
+		return (DWORD)-1;
 
 	RegCloseKey(hkBase);
 
-	return lpwszDevices[dwIndex];
+	return dwIndex;
 }
 
 HRESULT SetDefaultAudioPlaybackDevice(LPCWSTR devID)
@@ -72,12 +65,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
-	LPCWSTR lpwszDeviceID = GetThisTimeDevice();
-	if (lpwszDeviceID == NULL) {
-		OutputDebugString(_T("Can't get toggle information\r\n"));
-		return -1;
-	}
-
 	HRESULT hr = CoInitialize(NULL);
 	if (SUCCEEDED(hr))
 	{
@@ -99,40 +86,40 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (HRFAILED(hr))
 			return hr;
 
-		for (int i = 0; i < count; i++)
-		{
-			CComPtr<IMMDevice> pDevice;
-			hr = pDevices->Item(i, &pDevice);
-			if (HRFAILED(hr))
-				continue;
-
-			LPWSTR wstrID = NULL;
-			hr = pDevice->GetId(&wstrID);
-			if (HRFAILED(hr))
-				continue;
-
-			CComPtr<IPropertyStore> pStore;
-			hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
-			if (HRFAILED(hr))
-				continue;
-
-			PROPVARIANT friendlyName;
-			PropVariantInit(&friendlyName);
-			hr = pStore->GetValue(PKEY_Device_FriendlyName, &friendlyName);
-			if (HRFAILED(hr))
-				continue;
-
-			if (wcscmp(lpwszDeviceID, wstrID) == 0) {
-				WCHAR buf[512];
-				_snwprintf_s(buf, _TRUNCATE, L"Set to %ws\r\n", friendlyName.pwszVal);
-				OutputDebugStringW(buf);
-				SetDefaultAudioPlaybackDevice(wstrID);
-				return 0;
-			}
-
-			PropVariantClear(&friendlyName);
+		DWORD dwIndex = GetThisTimeDevice(count);
+		if (dwIndex == (DWORD)-1) {
+			OutputDebugString(_T("Can't get toggle information\r\n"));
+			return -1;
 		}
+
+		CComPtr<IMMDevice> pDevice;
+		hr = pDevices->Item(dwIndex, &pDevice);
+		if (HRFAILED(hr))
+			return -1;
+
+		LPWSTR wstrID = NULL;
+		hr = pDevice->GetId(&wstrID);
+		if (HRFAILED(hr))
+			return -1;
+
+		CComPtr<IPropertyStore> pStore;
+		hr = pDevice->OpenPropertyStore(STGM_READ, &pStore);
+		if (HRFAILED(hr))
+			return -1;
+
+		PROPVARIANT friendlyName;
+		PropVariantInit(&friendlyName);
+		hr = pStore->GetValue(PKEY_Device_FriendlyName, &friendlyName);
+		if (HRFAILED(hr))
+			return -1;
+
+		WCHAR buf[512];
+		_snwprintf_s(buf, _TRUNCATE, L"Set to %ws\r\n", friendlyName.pwszVal);
+		OutputDebugStringW(buf);
+		SetDefaultAudioPlaybackDevice(wstrID);
+
+		PropVariantClear(&friendlyName);
 	}
 
-	return hr;
+	return 0;
 }
