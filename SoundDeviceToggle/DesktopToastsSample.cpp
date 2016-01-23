@@ -3,6 +3,7 @@
 #include "StringReferenceWrapper.h"
 #include "ToastEventHandler.h"
 #include "SoundDeviceToggle.h"
+#include "resource.h"
 
 using namespace Microsoft::WRL;
 using namespace ABI::Windows::UI::Notifications;
@@ -153,12 +154,12 @@ HRESULT DesktopToastsApp::Initialize()
         wcex.cbClsExtra    = 0;
         wcex.cbWndExtra    = sizeof(LONG_PTR);
         wcex.hInstance     = HINST_THISCOMPONENT;
-        wcex.hIcon         = LoadIcon(nullptr, IDI_APPLICATION);
+        wcex.hIcon         = LoadIcon(nullptr, MAKEINTRESOURCE(IDI_PRETTYSPEAKER));
         wcex.hCursor       = LoadCursor(nullptr, IDC_ARROW);
         wcex.hbrBackground = nullptr;
         wcex.lpszMenuName  = nullptr;
         wcex.lpszClassName = L"SoundDeviceToggleApp";
-        wcex.hIconSm       = LoadIcon(nullptr, IDI_APPLICATION);
+        wcex.hIconSm       = LoadIcon(nullptr, MAKEINTRESOURCE(IDI_PRETTYSPEAKER));
         atom = RegisterClassEx(&wcex);
         
         hr = atom ? S_OK : E_FAIL;

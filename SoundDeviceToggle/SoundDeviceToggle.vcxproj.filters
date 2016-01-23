@@ -60,10 +60,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="SoundDeviceToggle.ico">
+    <Image Include="Iconleak-Atrous-Speaker.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
